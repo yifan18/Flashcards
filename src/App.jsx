@@ -1,116 +1,183 @@
-import React, { useState } from "react";
-import logo from "./logo.svg";
+import React, { useState, useEffect } from "react";
 import "./App.css";
 import { createForm } from "rc-form";
-import { FormGroup, InputGroup, Button, Icon } from "@blueprintjs/core";
+import {
+  FormGroup,
+  InputGroup,
+  Button,
+  Dialog,
+  Classes,
+  Intent,
+  EditableText,
+  TagInput,
+  TextArea,
+  FileInput,
+  Icon
+} from "@blueprintjs/core";
+import { createStoreConnect, STORE_CARD } from "./db";
+import BooleanTrigger from "./boolean-trigger";
+
+const cardStore = createStoreConnect(STORE_CARD);
 
 function App() {
-  const newCard = ({ front }) => {
-    //check for support
-    if (!("indexedDB" in window)) {
-      console.log("This browser doesn't support IndexedDB");
-      return;
-    }
-    const dbPromise = indexedDB.open("flashcards", 1, function(db) {
-      if (!db.objectStoreNames.contains("card")) {
-        db.createObjectStore("card", { keyPath: "id", autoIncrement: true });
-      }
+  const [state, setState] = useState({ list: [] });
+  const refresh = () => cardStore.query().then(list => setState({ list }));
 
-      var tx = db.transaction("card", "readwrite");
-      var card = tx.objectStore("card");
-      var item = {
-        front,
-        back: "",
-        imgs: [],
-        tags: [],
-        created: new Date().getTime()
-      };
-      card.add(item);
-      if (tx.complete) console.log("added item to the card os!");
-    });
-    // console.log('dbPromise', dbPromise)
-    // dbPromise
-    //   .then(function(db) {
-    //     var tx = db.transaction("card", "readwrite");
-    //     var card = tx.objectStore("card");
-    //     var item = {
-    //       front,
-    //       back: "",
-    //       imgs: [],
-    //       tags: [],
-    //       created: new Date().getTime()
-    //     };
-    //     card.add(item);
-    //     return tx.complete;
-    //   })
-    //   .then(function() {
-    //     console.log("added item to the card os!");
-    //   });
-  };
+  useEffect(function() {
+    console.log("didmount");
+    refresh();
+  }, []);
+
   return (
-    <div>
+    <div style={{ padding: 12 }}>
       <h1>Cards</h1>
       <div>
-        <WordEdit onSubmit={newCard} />
+        <BooleanTrigger destroyOnClose>
+          <Button intent="primary" icon="add">
+            New Card
+          </Button>
+          <WordEdit
+            onOk={(values, haveNext) => {
+              cardStore
+                .add({
+                  front: values.front,
+                  back: values.back,
+                  pictures: values.pictures,
+                  tags: values.tags
+                })
+                .then(refresh);
+              return haveNext;
+            }}
+          />
+        </BooleanTrigger>
       </div>
-      <div />
+      <div>
+        <table className="bp3-html-table">
+          <thead>
+            <tr>
+              <th>front</th>
+              <th>back</th>
+              <th>picture</th>
+              <th>tags</th>
+              <th>option</th>
+            </tr>
+          </thead>
+          <tbody>
+            {state.list.map(({ id, front, back, pictures, tags }) => (
+              <tr key={id}>
+                <td>{front}</td>
+                <td>{back}</td>
+                <td>{pictures ? <img src={pictures} /> : false}</td>
+                <td>{tags}</td>
+                <td>
+                  <BooleanTrigger destroyOnClose>
+                    <Button
+                      small
+                      minimal
+                      icon="edit"
+                      style={{ marginRight: 5 }}
+                    />
+                    <WordEdit
+                      isEdit
+                      value={{ front, back, pictures: pictures, tags }}
+                      onOk={values =>
+                        cardStore
+                          .modify(
+                            {
+                              id,
+                              front: values.front,
+                              back: values.back,
+                              pictures: values.pictures,
+                              tags: values.tags
+                            },
+                            {
+                              incrementModif: true
+                            }
+                          )
+                          .then(refresh)
+                      }
+                    />
+                  </BooleanTrigger>
+                  <Button
+                    small
+                    minimal
+                    icon="remove"
+                    onClick={() => cardStore.delete(id).then(refresh)}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
 
+const WordEdit = createForm()(function WordEdit({
+  value,
+  isEdit,
+  visible,
+  onOk,
+  onCancel,
+  form
+}) {
+  const url = form.getFieldValue("pictures");
+  const contentStyle = { width: "100%" };
 
-const WordEdit = createForm()(class WordEdit extends React.Component{
-  render(){
-    const { form, onSubmit } = this.props;
-    return (
-      <div>
-        <FormGroup label="front">
+  useEffect(function() {
+    isEdit && form.setFieldsValue(value);
+  }, []);
+  return (
+    <Dialog
+      isOpen={visible}
+      title={isEdit ? "Edit Card" : "New Card"}
+      onClose={onCancel}
+    >
+      <div className={Classes.DIALOG_BODY}>
+        <FormGroup label="front" labelInfo="*">
           {form.getFieldDecorator("front", {
-            rules: [{ require: true, message: "please input" }]
-          })(<InputGroup />)}
+            rules: [{ required: true, message: "please input" }]
+          })(<TextArea style={contentStyle} />)}
         </FormGroup>
-        <FormGroup label="">
-          <Button
-            intent="success"
-            text="create"
-            onClick={() => {
-              console.log('gggg')
-              const values = form.getFieldsValue();
-              onSubmit(values);
-            }}
-          />
-          <a onClick={() => {
-            // debugger
-            var a = '15'
-          }}> click</a>
+        <FormGroup label="back" labelInfo="*">
+          {form.getFieldDecorator("back", {
+            rules: [{ required: true, message: "please input" }]
+          })(<TextArea style={contentStyle} />)}
+        </FormGroup>
+        <img src={url} />
+        <FormGroup label="picture">
+          {form.getFieldDecorator("pictures", {})(
+            <InputGroup placeholder="image url" />
+          )}
+        </FormGroup>
+        <FormGroup label="tags">
+          {form.getFieldDecorator("tags", {
+            initialValue: [],
+            valuePropName: "values"
+          })(<TagInput />)}
         </FormGroup>
       </div>
-    );
-  }
-})
-
-
-// const WordEdit = createForm()(function WordEdit({ form, onSubmit }) {
-//   return (
-//     <div>
-//       <FormGroup label="front">
-//         {form.getFieldDecorator("front", {
-//           rules: [{ require: true, message: "please input" }]
-//         })(<InputGroup />)}
-//       </FormGroup>
-//       <FormGroup label="">
-//         <Button
-//           intent="success"
-//           text="create"
-//           onClick={() => {
-//             console.log('gggg')
-//             const values = form.getFieldsValue();
-//             onSubmit(values);
-//           }}
-//         />
-//       </FormGroup>
-//     </div>
-//   );
-// });
+      <div className={Classes.DIALOG_FOOTER}>
+        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+          <Button onClick={onCancel}>Cancel</Button>
+          <Button
+            rightIcon="arrow-right"
+            intent={Intent.SUCCESS}
+            onClick={() => {
+              form.validateFields((err, values) => {
+                if (err) return;
+                onOk(values, false);
+                form.resetFields()
+              });
+            }}
+          >
+            Save & Next
+          </Button>
+        </div>
+      </div>
+    </Dialog>
+  );
+});
 
 export default App;
