@@ -13,10 +13,10 @@ import {
   Position
 } from "@blueprintjs/core";
 import { Cards } from "./cards";
-import { Review } from "./review";
-import { Router, Route, withRouter, Switch, Redirect } from "react-router-dom";
 
-function App({ history }) {
+function App() {
+  const [state, setState] = useState({ pageIndex: 1 });
+
   return (
     <div style={{ padding: 12 }}>
       <Navbar>
@@ -27,7 +27,7 @@ function App({ history }) {
             className={Classes.MINIMAL}
             icon="git-repo"
             text="Cards"
-            onClick={() => history.push("/cards")}
+            onClick={() => setState({ pageIndex: 1 })}
           />
           <Popover
             content={
@@ -35,17 +35,17 @@ function App({ history }) {
                 <MenuItem
                   icon="duplicate"
                   text="Read Review"
-                  onClick={() => history.push("/test/read")}
+                  onClick={() => setState({ pageIndex: 2 })}
                 />
                 <MenuItem
                   icon="highlight"
                   text="Spell Review"
-                  onClick={() => history.push("/test/spell")}
+                  onClick={() => setState({ pageIndex: 3 })}
                 />
                 <MenuItem
                   icon="resolve"
                   text="Recall Review"
-                  onClick={() => history.push("/test/recall")}
+                  onClick={() => setState({ pageIndex: 4 })}
                 />
               </Menu>
             }
@@ -61,40 +61,9 @@ function App({ history }) {
         </NavbarGroup>
       </Navbar>
 
-      <div style={{ paddingTop: 12 }}>
-        {/* <Route exact path="/cards" component={Cards} /> */}
-        <Switch>
-          <Route
-            exact
-            path="/test/read"
-            render={() => <Review type="read" />}
-          />
-          <Route
-            exact
-            path="/test/spell"
-            render={() => <Review type="spell" />}
-          />
-          <Route
-            exact
-            path="/test/recall"
-            render={() => <Review type="recall" />}
-          />
-          <Route exact path="/" component={Cards} />
-          <Redirect
-            to={{
-              pathname: "/"
-            }}
-          ></Redirect>
-        </Switch>
-      </div>
+      <div style={{paddingTop: 12}}>{state.pageIndex === 1 && <Cards />}</div>
     </div>
   );
 }
 
-App = withRouter(App);
-
 export default App;
-// export default App;
-// export default function(){
-//   return <div>111</div>
-// };
