@@ -5,12 +5,14 @@ import {
   FormGroup,
   InputGroup,
   Button,
+  ButtonGroup,
   Dialog,
   Classes,
   Intent,
   TagInput,
   TextArea,
-  Toaster
+  Toaster,
+  Icon
 } from "@blueprintjs/core";
 import { createStoreConnect, STORE_CARD } from "./db";
 import BooleanTrigger from "./boolean-trigger";
@@ -38,7 +40,7 @@ export function Cards() {
                 .add({
                   front: values.front,
                   back: values.back,
-                  pictures: values.pictures,
+                  picture: values.picture,
                   tags: values.tags,
                   readLevel: 1,
                   spellLevel: 1,
@@ -49,8 +51,8 @@ export function Cards() {
           />
         </BooleanTrigger>
       </div>
-      <div style={{marginTop: 12}}>
-        <table className="bp3-html-table" style={{width: '100%'}}>
+      <div style={{ marginTop: 12 }}>
+        <table className="bp3-html-table" style={{ width: "100%" }}>
           <thead>
             <tr>
               <th>Front</th>
@@ -69,7 +71,7 @@ export function Cards() {
                 id,
                 front,
                 back,
-                pictures,
+                picture,
                 tags,
                 readLevel,
                 spellLevel,
@@ -78,7 +80,7 @@ export function Cards() {
                 <tr key={id}>
                   <td>{front}</td>
                   <td>{back}</td>
-                  <td>{pictures ? <img src={pictures} /> : false}</td>
+                  <td>{picture ? <img src={picture} /> : false}</td>
                   <td>{tags}</td>
                   <td>{readLevel}</td>
                   <td>{spellLevel}</td>
@@ -93,7 +95,7 @@ export function Cards() {
                       />
                       <CardEdit
                         isEdit
-                        value={{ front, back, pictures: pictures, tags }}
+                        value={{ front, back, picture, tags }}
                         onSubmit={values =>
                           cardStore
                             .modify(
@@ -101,7 +103,7 @@ export function Cards() {
                                 id,
                                 front: values.front,
                                 back: values.back,
-                                pictures: values.pictures,
+                                picture: values.picture,
                                 tags: values.tags
                               },
                               {
@@ -139,7 +141,7 @@ const CardEdit = createForm()(function CardEditor({
   form
 }) {
   const [state, setState] = useState({ loading: false });
-  const url = form.getFieldValue("pictures");
+  const url = form.getFieldValue("picture");
   const contentStyle = { width: "100%" };
 
   const _onSubmit = () => {
@@ -150,19 +152,26 @@ const CardEdit = createForm()(function CardEditor({
       onSubmit(values)
         .then(() => {
           setState({ loading: false });
-          Toaster.create({
-            intent: Intent.SUCCESS,
-            message: "Saved!"
-          });
 
           if (isEdit) {
+            Toaster.create().show({
+              intent: Intent.SUCCESS,
+              message: "Updated",
+              icon: "tick"
+            });
             return onOk();
+          } else {
+            Toaster.create().show({
+              intent: Intent.SUCCESS,
+              message: "Saved",
+              icon: "tick"
+            });
           }
           // 清空
           form.setFieldsValue({
             front: "",
             back: "",
-            pictures: "",
+            picture: "",
             tags: []
           });
         })
@@ -195,8 +204,36 @@ const CardEdit = createForm()(function CardEditor({
         </FormGroup>
         <img src={url} />
         <FormGroup label="picture">
-          {form.getFieldDecorator("pictures", {})(
-            <InputGroup placeholder="image url" />
+          {form.getFieldDecorator("picture", {})(
+            <InputGroup
+              placeholder="image url"
+              rightElement={
+                <ButtonGroup minimal>
+                  <Button
+                    icon="image-rotate-left"
+                    onClick={() => {
+                      const word = form.getFieldValue("front") || "";
+                      if (!word.trim()) return;
+                      window.open(
+                        `https://www.google.com/search?q=${word}&tbm=isch`,
+                        "_blank"
+                      );
+                    }}
+                  />
+                  <Button
+                    icon="media"
+                    onClick={() => {
+                      const word = form.getFieldValue("front") || "";
+                      if (!word.trim()) return;
+                      window.open(
+                        `https://www.google.com/search?q=${word}&tbm=isch`,
+                        "_blank"
+                      );
+                    }}
+                  />
+                </ButtonGroup>
+              }
+            />
           )}
         </FormGroup>
         <FormGroup label="tags">
