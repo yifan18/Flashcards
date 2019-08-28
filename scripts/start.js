@@ -143,3 +143,4 @@ checkBrowsers(paths.appPath, isInteractive)
     }
     process.exit(1);
   });
+

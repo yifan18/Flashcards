@@ -1,37 +1,54 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
-import { createForm } from "rc-form";
 import {
-  FormGroup,
-  InputGroup,
   Button,
+  Icon,
   ButtonGroup,
-  Dialog,
-  Classes,
   Intent,
-  TagInput,
-  TextArea,
-  Toaster,
-  Icon
+  Checkbox,
+  RadioGroup,
+  Radio
 } from "@blueprintjs/core";
-import { createStoreConnect, STORE_CARD } from "./db";
+import { createStoreConnect, STORE_CARD, STORE_SETTING } from "./db";
 import BooleanTrigger from "./boolean-trigger";
+import { CardEdit } from "./card-edit";
 
 const cardStore = createStoreConnect(STORE_CARD);
 
+const settingStore = createStoreConnect(STORE_SETTING);
+
 export function Cards() {
-  const [state, setState] = useState({ list: [] });
-  const refresh = () => cardStore.query().then(list => setState({ list }));
+  const [state, setState] = useState({
+    list: [],
+    showBack: false,
+    loading: true,
+    backIds: []
+  });
+  const _setState = newState => {
+    Object.assign(state, newState);
+    setState({ ...state, ...newState });
+  };
+  const refresh = () =>
+    cardStore.query().then(list => _setState({ ...state, list }));
 
   useEffect(function() {
-    refresh();
+    Promise.all([
+      refresh(),
+      settingStore.queryById("default_cards_view").then(({ value }) => {
+        _setState({ ...state, showBack: value === "back" });
+      })
+    ]).then(() => {
+      _setState({ loading: false });
+    });
   }, []);
+
+  if (state.loading) return null;
 
   return (
     <>
       <div>
         <BooleanTrigger destroyOnClose>
-          <Button intent="primary" icon="add">
+          <Button intent="primary" icon="add" large>
             New Card
           </Button>
           <CardEdit
@@ -50,222 +67,210 @@ export function Cards() {
             }
           />
         </BooleanTrigger>
+
+        <RadioGroup
+          selectedValue={state.showBack}
+          inline
+          style={{ float: "right" }}
+          onChange={e => {
+            const value = e.target.value === "true";
+            settingStore
+              .modify({
+                id: "default_cards_view",
+                value: value ? "back" : "front"
+              })
+              .then(() => {
+                _setState({ showBack: value, backIds: [] });
+              });
+          }}
+        >
+          <Radio large value={false}>
+            front
+          </Radio>
+          <Radio large value={true}>
+            back
+          </Radio>
+        </RadioGroup>
       </div>
       <div style={{ marginTop: 12 }}>
-        <table className="bp3-html-table" style={{ width: "100%" }}>
-          <thead>
-            <tr>
-              <th>Front</th>
-              <th>Back</th>
-              <th>Picture</th>
-              <th>Tags</th>
-              <th>Read Level</th>
-              <th>Spell Level</th>
-              <th>Recall Level</th>
-              <th>Option</th>
-            </tr>
-          </thead>
-          <tbody>
-            {state.list.map(
-              ({
-                id,
-                front,
-                back,
-                picture,
-                tags,
-                readLevel,
-                spellLevel,
-                recallLevel
-              }) => (
-                <tr key={id}>
-                  <td>{front}</td>
-                  <td>{back}</td>
-                  <td>{picture ? <img src={picture} /> : false}</td>
-                  <td>{tags}</td>
-                  <td>{readLevel}</td>
-                  <td>{spellLevel}</td>
-                  <td>{recallLevel}</td>
-                  <td>
-                    <BooleanTrigger destroyOnClose>
-                      <Button
-                        small
-                        minimal
-                        icon="edit"
-                        style={{ marginRight: 5 }}
-                      />
-                      <CardEdit
-                        isEdit
-                        value={{ front, back, picture, tags }}
-                        onSubmit={values =>
-                          cardStore
-                            .modify(
-                              {
-                                id,
-                                front: values.front,
-                                back: values.back,
-                                picture: values.picture,
-                                tags: values.tags
-                              },
-                              {
-                                incrementModif: true
-                              }
-                            )
-                            .then(refresh)
-                        }
-                      />
-                    </BooleanTrigger>
-                    <Button
-                      small
-                      minimal
-                      icon="remove"
-                      onClick={() => cardStore.delete(id).then(refresh)}
-                    />
-                  </td>
-                </tr>
-              )
-            )}
-          </tbody>
-        </table>
+        <FlowLayout>
+          {state.list.map(record => (
+            <Card
+              {...record}
+              onReload={refresh}
+              showBack={
+                state.showBack
+                  ? !~state.backIds.indexOf(record.id)
+                  : !!~state.backIds.indexOf(record.id)
+              }
+              onChange={value => {
+                let _v = state.showBack
+                  ? !(value === "back")
+                  : value === "back";
+                if (_v) {
+                  _setState({ backIds: state.backIds.concat(record.id) });
+                } else {
+                  _setState({
+                    backIds: state.backIds.filter(id => id !== record.id)
+                  });
+                }
+              }}
+            />
+          ))}
+        </FlowLayout>
       </div>
     </>
   );
 }
 
-const CardEdit = createForm()(function CardEditor({
-  value,
-  isEdit,
-  visible,
-  onSubmit,
-  onOk,
-  onCancel,
-  form
-}) {
-  const [state, setState] = useState({ loading: false });
-  const url = form.getFieldValue("picture");
-  const contentStyle = { width: "100%" };
-
-  const _onSubmit = () => {
-    form.validateFields((err, values) => {
-      if (err) return;
-
-      setState({ loading: true });
-      onSubmit(values)
-        .then(() => {
-          setState({ loading: false });
-
-          if (isEdit) {
-            Toaster.create().show({
-              intent: Intent.SUCCESS,
-              message: "Updated",
-              icon: "tick"
-            });
-            return onOk();
-          } else {
-            Toaster.create().show({
-              intent: Intent.SUCCESS,
-              message: "Saved",
-              icon: "tick"
-            });
-          }
-          // 清空
-          form.setFieldsValue({
-            front: "",
-            back: "",
-            picture: "",
-            tags: []
-          });
-        })
-        .catch(error => {
-          console.error(error);
-          setState({ loading: false });
-        });
-    });
-  };
-
-  useEffect(function() {
-    isEdit && form.setFieldsValue(value);
-  }, []);
+function FlowLayout({ children }) {
+  const column = 3;
+  const lists = [];
+  React.Children.map(children, function(node, i) {
+    let arr = lists[i % column];
+    if (!arr) {
+      arr = lists[i % column] = [];
+    }
+    arr.push(node);
+  });
   return (
-    <Dialog
-      isOpen={visible}
-      title={isEdit ? "Edit Card" : "New Card"}
-      onClose={onCancel}
+    <div style={{ display: "flex", justifyContent: "space-between" }}>
+      {Array.from({ length: column }).map((r, i) => {
+        return (
+          <div style={{ flexBasis: "31%", wordBreak: "break-all" }}>
+            {lists[i]}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function Card({
+  id,
+  front,
+  back,
+  picture,
+  tags,
+  showBack,
+  onReload,
+  onChange
+}) {
+  const toggle = () => onChange(showBack ? "front" : "back");
+  return (
+    <div
+      style={{
+        padding: "35px 0 15px",
+        marginBottom: 25,
+        alignItems: "center",
+        justifyContent: "space-between",
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+        height: 310,
+        borderRadius: "36px",
+        boxShadow: "1px 3px 4px rgb(183, 183, 183)",
+        background: "rgb(248,244,238)",
+        border: "2px solid rgb(234,93,48)"
+      }}
     >
-      <div className={Classes.DIALOG_BODY}>
-        <FormGroup label="front" labelInfo="*">
-          {form.getFieldDecorator("front", {
-            rules: [{ required: true, message: "please input" }]
-          })(<TextArea style={contentStyle} />)}
-        </FormGroup>
-        <FormGroup label="back" labelInfo="*">
-          {form.getFieldDecorator("back", {
-            rules: [{ required: true, message: "please input" }]
-          })(<TextArea style={contentStyle} />)}
-        </FormGroup>
-        <img src={url} />
-        <FormGroup label="picture">
-          {form.getFieldDecorator("picture", {})(
-            <InputGroup
-              placeholder="image url"
-              rightElement={
-                <ButtonGroup minimal>
-                  <Button
-                    icon="image-rotate-left"
-                    onClick={() => {
-                      const word = form.getFieldValue("front") || "";
-                      if (!word.trim()) return;
-                      window.open(
-                        `https://www.google.com/search?q=${word}&tbm=isch`,
-                        "_blank"
-                      );
-                    }}
-                  />
-                  <Button
-                    icon="media"
-                    onClick={() => {
-                      const word = form.getFieldValue("front") || "";
-                      if (!word.trim()) return;
-                      window.open(
-                        `https://www.google.com/search?q=${word}&tbm=isch`,
-                        "_blank"
-                      );
-                    }}
-                  />
-                </ButtonGroup>
-              }
-            />
-          )}
-        </FormGroup>
-        <FormGroup label="tags">
-          {form.getFieldDecorator("tags", {
-            initialValue: [],
-            valuePropName: "values"
-          })(<TagInput />)}
-        </FormGroup>
+      <img
+        src={picture || require("./images/noimage.png")}
+        style={{ height: 120, maxWidth: "100%", borderRadius: "26px" }}
+      />
+      <div
+        style={{
+          fontSize: computeFontSize(
+            { maxWidth: 220, symbolSize: 36, symbolWidth: 21 },
+            front
+          ),
+          fontWeight: showBack ? 'normal' : "bold",
+          lineHeight: "28px",
+          marginTop: 20,
+          fontFamily: "monospace",
+          cursor: "pointer",
+          width: "100%",
+          textAlign: "center",
+          position: "relative"
+        }}
+        onClick={toggle}
+      >
+        {showBack ? back : front}
+        <span
+          style={{
+            width: 12,
+            height: 16,
+            border: "2px solid rgb(234,93,48)",
+            borderRadius: "4px",
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            margin: 'auto 0',
+            background: showBack ? "rgb(234,93,48)" : undefined
+          }}
+          title={showBack ? "back" : "front"}
+        ></span>
       </div>
-      <div className={Classes.DIALOG_FOOTER}>
-        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-          <Button onClick={onCancel}>Cancel</Button>
-          {isEdit ? (
+      <div
+        style={{
+          marginTop: 15,
+          display: "flex",
+          width: "100%",
+          padding: '0 10px'
+        }}
+      >
+        <div style={{ flexGrow: 1 }}>
+          <Button
+            minimal
+            icon={"tag"}
+            title={tags.toString()}
+            text={tags.toString()}
+            intent={Intent.WARNING}
+            disabled
+          />
+        </div>
+        <div>
+          <ButtonGroup minimal>
+            <BooleanTrigger destroyOnClose>
+              <Button icon="edit" intent={Intent.WARNING}></Button>
+              <CardEdit
+                isEdit
+                value={{ front, back, picture, tags }}
+                onSubmit={values =>
+                  cardStore
+                    .modify(
+                      {
+                        id,
+                        front: values.front,
+                        back: values.back,
+                        picture: values.picture,
+                        tags: values.tags
+                      },
+                      {
+                        incrementModif: true
+                      }
+                    )
+                    .then(onReload)
+                }
+              />
+            </BooleanTrigger>
+
             <Button
-              intent={Intent.SUCCESS}
-              loading={state.loading}
-              onClick={_onSubmit}
-            >
-              Save
-            </Button>
-          ) : (
-            <Button
-              rightIcon="arrow-right"
-              intent={Intent.SUCCESS}
-              loading={state.loading}
-              onClick={_onSubmit}
-            >
-              Save & Next
-            </Button>
-          )}
+              icon="delete"
+              onClick={() => cardStore.delete(id).then(onReload)}
+              intent={Intent.WARNING}
+            ></Button>
+          </ButtonGroup>
         </div>
       </div>
-    </Dialog>
+    </div>
   );
-});
+}
+
+function computeFontSize({ maxWidth, symbolSize, symbolWidth }, text) {
+  // 12px 7.2
+  // 36px 21
+  const len = text.length;
+  if (symbolWidth * len < maxWidth) return symbolSize;
+  return parseInt((maxWidth / len) * (symbolSize / symbolWidth));
+}

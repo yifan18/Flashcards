@@ -81,6 +81,15 @@ async function getDB() {
   if (newCreated[STORE_SETTING]) {
     const tx = db.transaction(STORE_SETTING, "readwrite");
     const store = tx.objectStore(STORE_SETTING);
+
+    // 清空设定
+    let next = await store.index("id").openCursor();
+    while (next) {
+      store.delete(next.value.id);
+      next = await next.continue();
+    }
+
+    // 新增
     store.add({
       id: "read_default_view",
       value: ["front", "picture"]
@@ -90,6 +99,7 @@ async function getDB() {
       value: ["back", "picture"]
     });
     store.add({ id: "recall_default_view", value: ["picture"] });
+    store.add({ id: "default_cards_view", value: "front" });
     await tx.done;
   }
 

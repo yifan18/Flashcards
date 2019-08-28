@@ -6,11 +6,13 @@ const noopServiceWorkerMiddleware = require('react-dev-utils/noopServiceWorkerMi
 const ignoredFiles = require('react-dev-utils/ignoredFiles');
 const paths = require('./paths');
 const fs = require('fs');
+const fetch = require('node-fetch');
+var http = require("http");
 
 const protocol = process.env.HTTPS === 'true' ? 'https' : 'http';
 const host = process.env.HOST || '0.0.0.0';
 
-module.exports = function(proxy, allowedHost) {
+module.exports = function (proxy, allowedHost) {
   return {
     // WebpackDevServer 2.4.3 introduced a security fix that prevents remote
     // websites from potentially accessing local content through DNS rebinding:
@@ -92,6 +94,33 @@ module.exports = function(proxy, allowedHost) {
       app.use(evalSourceMapMiddleware(server));
       // This lets us open files from the runtime error overlay.
       app.use(errorOverlayMiddleware());
+
+      app.use(function (req, res, next) {
+        const path = req.path
+        if (path.startsWith('/proxy')) {
+          const url = decodeURIComponent(req.query.url)
+          console.log('url ==> ', url)
+
+          var options = {
+            host: "localhost",
+            port: 8123,
+            path: url,
+            headers: {
+              Host: "www.google.com"
+            }
+          };
+          http.get(options, function (_res) {
+            _res.addListener('data', function (chunk) {
+              res.write(chunk)
+            })
+            _res.addListener('end', function () {
+              res.end()
+            })
+          });
+          return;
+        }
+        next()
+      });
 
       // This service worker file is effectively a 'no-op' that will reset any
       // previous service worker registered for the same host:port combination.

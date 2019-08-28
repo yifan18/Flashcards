@@ -61,7 +61,7 @@ function App({ history }) {
         </NavbarGroup>
       </Navbar>
 
-      <div style={{ paddingTop: 12 }}>
+      <div style={{ paddingTop: 12, width: 800, margin: '0 auto' }}>
         {/* <Route exact path="/cards" component={Cards} /> */}
         <Switch>
           <Route
