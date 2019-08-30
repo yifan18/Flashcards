@@ -10,11 +10,16 @@ import {
   Menu,
   MenuItem,
   Popover,
-  Position
+  Position,
+  Toaster,
+  Intent
 } from "@blueprintjs/core";
 import { Cards } from "./cards";
 import { Review } from "./review";
 import { Router, Route, withRouter, Switch, Redirect } from "react-router-dom";
+import { createStoreConnect, STORE_CARD } from './db';
+
+const cardStore = createStoreConnect(STORE_CARD)
 
 function App({ history }) {
   return (
@@ -58,6 +63,56 @@ function App({ history }) {
               text="Review"
             />
           </Popover>
+        
+          <NavbarDivider />
+          <Button
+            minimal
+            onClick={() => {
+            const input = document.createElement('input')
+            input.type = 'file';
+            input.style.display = 'none';
+            input.addEventListener('change', function(e){
+              if(e.target.files.length){
+                const file = e.target.files[0];
+                var reader = new FileReader();
+                reader.onload = function(){
+                  var text = reader.result;
+                  const rows = text.split('\r\n')
+                  const list = rows.map(row => {
+                    const [x, word, content, remembered, time] = row.split(',');
+                    const match = content.match(/(.+?)\[(https?:\/\/.+?)\]/)
+                    return  {
+                      front: word.replace(/"/g, ''),
+                      back: (match ? match[1] : content).replace(/"/g, ''),
+                      picture: match ? match[2] : '',
+                      tags: [],
+                      readLevel: remembered === '1' ? 7 : 1,
+                      spellLevel: remembered === '1' ? 7 : 1,
+                      recallLevel: remembered === '1' ? 7 : 1
+                    }
+
+                  })
+                  // console.log('list', list)
+                  cardStore.batchAdd(list).then(() => Toaster.create().show({intent: Intent.SUCCESS, message: 'imported!'}))
+                  // try{
+                  //   console.log(JSON.stringify([]))
+                  // }catch(error){
+                  //   console.error(error)
+                  // }
+                };
+                reader.readAsText(file);
+              }
+              document.body.removeChild(input)
+            })
+            document.body.appendChild(input);
+
+            var clickEvent = new MouseEvent('click', {
+              view: window,
+              bubbles: true,
+              cancelable: true
+            });
+            input.dispatchEvent(clickEvent)
+          }}>Batch Import</Button>
         </NavbarGroup>
       </Navbar>
 

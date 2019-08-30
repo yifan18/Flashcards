@@ -7,7 +7,9 @@ import {
   Intent,
   Checkbox,
   RadioGroup,
-  Radio
+  Radio,
+  Classes,
+  InputGroup
 } from "@blueprintjs/core";
 import { createStoreConnect, STORE_CARD, STORE_SETTING } from "./db";
 import BooleanTrigger from "./boolean-trigger";
@@ -22,14 +24,28 @@ export function Cards() {
     list: [],
     showBack: false,
     loading: true,
-    backIds: []
+    backIds: [],
+    keyword: ""
   });
-  const _setState = newState => {
+  const _setState = (newState) => {
     Object.assign(state, newState);
     setState({ ...state, ...newState });
   };
-  const refresh = () =>
-    cardStore.query().then(list => _setState({ ...state, list }));
+  const refresh = () => {
+    let findfn = null;
+    if (state.keyword) {
+      findfn = function findfn(record) {
+        if (
+          ~record.front.indexOf(state.keyword) ||
+          ~record.back.indexOf(state.keyword)
+        ) {
+          return true;
+        }
+        return false;
+      };
+    }
+    return cardStore.query(findfn).then(list => _setState({ ...state, list }));
+  };
 
   useEffect(function() {
     Promise.all([
@@ -91,6 +107,23 @@ export function Cards() {
             back
           </Radio>
         </RadioGroup>
+
+        <div style={{ margin: "10px 0 25px" }}>
+          <InputGroup
+            className={Classes.ROUND}
+            leftIcon="search"
+            placeholder="Search..."
+            large
+            autoFocus
+            onKeyDown={e => {
+              if (e.keyCode === 13) {
+                const value = e.target.value.trim();
+                _setState({ keyword: value } );
+                refresh()
+              }
+            }}
+          />
+        </div>
       </div>
       <div style={{ marginTop: 12 }}>
         <FlowLayout>
@@ -182,9 +215,9 @@ function Card({
         style={{
           fontSize: computeFontSize(
             { maxWidth: 220, symbolSize: 36, symbolWidth: 21 },
-            front
+            showBack ? back : front
           ),
-          fontWeight: showBack ? 'normal' : "bold",
+          fontWeight: showBack ? "normal" : "bold",
           lineHeight: "28px",
           marginTop: 20,
           fontFamily: "monospace",
@@ -205,7 +238,7 @@ function Card({
             position: "absolute",
             top: 0,
             bottom: 0,
-            margin: 'auto 0',
+            margin: "auto 0",
             background: showBack ? "rgb(234,93,48)" : undefined
           }}
           title={showBack ? "back" : "front"}
@@ -216,7 +249,7 @@ function Card({
           marginTop: 15,
           display: "flex",
           width: "100%",
-          padding: '0 10px'
+          padding: "0 10px"
         }}
       >
         <div style={{ flexGrow: 1 }}>
