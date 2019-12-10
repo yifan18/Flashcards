@@ -4,9 +4,9 @@ const errorOverlayMiddleware = require('react-dev-utils/errorOverlayMiddleware')
 const evalSourceMapMiddleware = require('react-dev-utils/evalSourceMapMiddleware');
 const noopServiceWorkerMiddleware = require('react-dev-utils/noopServiceWorkerMiddleware');
 const ignoredFiles = require('react-dev-utils/ignoredFiles');
+const generateAudio = require('./text-to-speech').generateAudio;
 const paths = require('./paths');
 const fs = require('fs');
-const fetch = require('node-fetch');
 var http = require("http");
 
 const protocol = process.env.HTTPS === 'true' ? 'https' : 'http';
@@ -101,15 +101,15 @@ module.exports = function (proxy, allowedHost) {
           const url = decodeURIComponent(req.query.url)
           console.log('url ==> ', url)
 
-          var options = {
-            host: "localhost",
-            port: 8123,
-            path: url,
-            headers: {
-              Host: "www.google.com"
-            }
-          };
-          http.get(options, function (_res) {
+          // var options = {
+          //   host: "localhost",
+          //   port: 8123,
+          //   path: url,
+          //   headers: {
+          //     Host: "www.google.com"
+          //   }
+          // };
+          http.get(url, function (_res) {
             _res.addListener('data', function (chunk) {
               res.write(chunk)
             })
@@ -117,6 +117,17 @@ module.exports = function (proxy, allowedHost) {
               res.end()
             })
           });
+          return;
+        }
+        if (path.startsWith('/speech')) {
+          const text = decodeURIComponent(req.query.text)
+          console.log('word ==> ', text)
+
+          generateAudio({ text }).then((relativePath) => {
+            res.status(200).json({ path: relativePath })
+          }).catch(err => {
+            res.status(500).json({ error: err })
+          })
           return;
         }
         next()

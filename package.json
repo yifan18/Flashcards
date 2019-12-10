@@ -20,6 +20,7 @@
     "@blueprintjs/datetime": "^3.9.2",
     "@blueprintjs/select": "^3.10.0",
     "@blueprintjs/table": "^3.7.0",
+    "@google-cloud/text-to-speech": "^2.0.2",
     "@svgr/webpack": "4.3.2",
     "@types/jest": "24.0.18",
     "@types/node": "12.7.2",
@@ -88,7 +89,8 @@
   "scripts": {
     "start": "PORT=4450 node scripts/start.js",
     "build": "node scripts/build.js",
-    "test": "node scripts/test.js"
+    "test": "node scripts/test.js",
+    "aa": "node test/text-to-speech.js"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -157,5 +159,8 @@
     "presets": [
       "react-app"
     ]
+  },
+  "devDependencies": {
+    "shelljs": "^0.8.3"
   }
 }
