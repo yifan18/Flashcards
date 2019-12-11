@@ -16,7 +16,8 @@ import {
 import {
   getGoogleSearchFirstImage,
   getGoogleSearchFirstImageUrl,
-  playAudio
+  playAudio,
+  serviceGet
 } from "./utils";
 
 export const CardEdit = createForm()(function CardEditor({
@@ -117,7 +118,7 @@ export const CardEdit = createForm()(function CardEditor({
                       const word = form.getFieldValue("front") || "";
                       if (!word.trim()) return;
                       const url = `http://www.google.com/search?q=${word}&tbm=isch`;
-                      fetch("/proxy?url=" + encodeURIComponent(url))
+                      serviceGet("/proxy?url=" + encodeURIComponent(url))
                         .then(res => res.text())
                         .then(text => {
                           const src =

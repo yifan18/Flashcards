@@ -4,10 +4,8 @@ const errorOverlayMiddleware = require('react-dev-utils/errorOverlayMiddleware')
 const evalSourceMapMiddleware = require('react-dev-utils/evalSourceMapMiddleware');
 const noopServiceWorkerMiddleware = require('react-dev-utils/noopServiceWorkerMiddleware');
 const ignoredFiles = require('react-dev-utils/ignoredFiles');
-const generateAudio = require('./text-to-speech').generateAudio;
 const paths = require('./paths');
 const fs = require('fs');
-var http = require("http");
 
 const protocol = process.env.HTTPS === 'true' ? 'https' : 'http';
 const host = process.env.HOST || '0.0.0.0';
@@ -95,43 +93,10 @@ module.exports = function (proxy, allowedHost) {
       // This lets us open files from the runtime error overlay.
       app.use(errorOverlayMiddleware());
 
-      app.use(function (req, res, next) {
-        const path = req.path
-        if (path.startsWith('/proxy')) {
-          const url = decodeURIComponent(req.query.url)
-          console.log('url ==> ', url)
-
-          // var options = {
-          //   host: "localhost",
-          //   port: 8123,
-          //   path: url,
-          //   headers: {
-          //     Host: "www.google.com"
-          //   }
-          // };
-          http.get(url, function (_res) {
-            _res.addListener('data', function (chunk) {
-              res.write(chunk)
-            })
-            _res.addListener('end', function () {
-              res.end()
-            })
-          });
-          return;
-        }
-        if (path.startsWith('/speech')) {
-          const text = decodeURIComponent(req.query.text)
-          console.log('word ==> ', text)
-
-          generateAudio({ text }).then((relativePath) => {
-            res.status(200).json({ path: relativePath })
-          }).catch(err => {
-            res.status(500).json({ error: err })
-          })
-          return;
-        }
-        next()
-      });
+      // app.use(function (req, res, next) {
+      //   const path = req.path
+      //   next()
+      // });
 
       // This service worker file is effectively a 'no-op' that will reset any
       // previous service worker registered for the same host:port combination.
