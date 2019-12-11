@@ -94,8 +94,9 @@
     "start": "PORT=80 node scripts/start.js",
     "build": "node scripts/build.js",
     "test": "node scripts/test.js",
+    "deploy": "npm run build && node server/frontend.js",
     "service": "pm2 start server/service.js -- --port 1280",
-    "deploy": "npm run build && cd build && http-server"
+    "frontend": "pm2 start server/frontend.js -- --port 80"
   },
   "eslintConfig": {
     "extends": "react-app"
