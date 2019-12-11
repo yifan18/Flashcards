@@ -8,7 +8,7 @@ const fs = require('fs');
 const util = require('util');
 const path = require('path');
 
-const audioPath = path.join(__dirname, '../public/audios/')
+const audioPath = path.join(__dirname, './asserts/audios/')
 
 exports.generateAudio = async function generateAudio({ text, gender = 'female' }) {
     // Creates a client
@@ -30,5 +30,5 @@ exports.generateAudio = async function generateAudio({ text, gender = 'female' }
     const writeFile = util.promisify(fs.writeFile);
     await writeFile(path.join(audioPath, filename), response.audioContent, 'binary');
     console.log(`Audio content written to file: ${filename}`);
-    return 'audios/' + filename
+    return 'asserts/audios/' + filename
 }
