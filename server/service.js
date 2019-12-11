@@ -19,6 +19,7 @@ var options = {
 }
 app.use('/audios', express.static(path.join(__dirname, 'audios'), options))
 app.get('*', (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*')
     const path = req.path
     console.log('visit ==>', path)
     if (path.startsWith('/proxy')) {
