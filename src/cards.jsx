@@ -14,6 +14,7 @@ import {
 import { createStoreConnect, STORE_CARD, STORE_SETTING } from "./db";
 import BooleanTrigger from "./boolean-trigger";
 import { CardEdit } from "./card-edit";
+import { playAudio } from "./utils";
 
 const cardStore = createStoreConnect(STORE_CARD);
 
@@ -190,6 +191,8 @@ function Card({
   onChange
 }) {
   const toggle = () => onChange(showBack ? "front" : "back");
+
+  const text = showBack ? back : front;
   return (
     <div
       style={{
@@ -215,7 +218,7 @@ function Card({
         style={{
           fontSize: computeFontSize(
             { maxWidth: 220, symbolSize: 36, symbolWidth: 21 },
-            showBack ? back : front
+            text
           ),
           fontWeight: showBack ? "normal" : "bold",
           lineHeight: "28px",
@@ -228,7 +231,7 @@ function Card({
         }}
         onClick={toggle}
       >
-        {showBack ? back : front}
+        {text}
         <span
           style={{
             width: 12,
@@ -264,6 +267,12 @@ function Card({
         </div>
         <div>
           <ButtonGroup minimal>
+          <Button
+              icon="volume-up"
+              onClick={() => playAudio({text: text})}
+              intent={Intent.WARNING}
+            ></Button>
+
             <BooleanTrigger destroyOnClose>
               <Button icon="edit" intent={Intent.WARNING}></Button>
               <CardEdit

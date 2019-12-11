@@ -13,3 +13,21 @@ export function getGoogleSearchFirstImageUrl(html) {
         return t1
     }
 }
+export function playAudio({text}){
+    const word = text;
+    if (!word.trim()) return;
+    fetch("/speech?text=" + encodeURIComponent(word))
+      .then(res => res.json())
+      .then(({ path }) => {
+        const audio = document.createElement('audio');
+        audio.src = path;
+        // audio.type = 'audio/mp3';
+        audio.style.display = 'none';
+        document.body.appendChild(audio)
+        audio.play();
+        // 播放完成销毁
+        audio.addEventListener('ended', (e: Event) => {
+          (e.target as HTMLAudioElement).remove()
+        })
+      });
+}

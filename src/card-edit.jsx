@@ -15,7 +15,8 @@ import {
 } from "@blueprintjs/core";
 import {
   getGoogleSearchFirstImage,
-  getGoogleSearchFirstImageUrl
+  getGoogleSearchFirstImageUrl,
+  playAudio
 } from "./utils";
 
 export const CardEdit = createForm()(function CardEditor({
@@ -82,7 +83,21 @@ export const CardEdit = createForm()(function CardEditor({
         <FormGroup label="front" labelInfo="*">
           {form.getFieldDecorator("front", {
             rules: [{ required: true, message: "please input" }]
-          })(<TextArea style={contentStyle} />)}
+          })(<InputGroup
+            rightElement={
+              <ButtonGroup minimal>
+                <Button
+                  icon="volume-up"
+                  onClick={() => {
+                    const word = form.getFieldValue("front") || "";
+                    if (!word.trim()) return;
+                    playAudio({ text: word })
+                  }}
+                />
+              </ButtonGroup>
+            }
+          />
+          )}
         </FormGroup>
         <FormGroup label="back" labelInfo="*">
           {form.getFieldDecorator("back", {
@@ -137,24 +152,11 @@ export const CardEdit = createForm()(function CardEditor({
       </div>
       <div className={Classes.DIALOG_FOOTER}>
         <Button
-          icon="media"
+          icon="volume-up"
           onClick={() => {
             const word = form.getFieldValue("front") || "";
             if (!word.trim()) return;
-            fetch("/speech?text=" + encodeURIComponent(word))
-              .then(res => res.json())
-              .then(({ path }) => {
-                const audio = document.createElement('audio');
-                audio.src = path;
-                // audio.type = 'audio/mp3';
-                audio.style.display = 'none';
-                document.body.appendChild(audio)
-                audio.play();
-                // 播放完成销毁
-                audio.addEventListener('ended', e => {
-                  e.target.remove()
-                })
-              });
+            playAudio({ text: word })
           }}
         />
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
