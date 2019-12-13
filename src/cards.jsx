@@ -11,14 +11,11 @@ import {
   Classes,
   InputGroup
 } from "@blueprintjs/core";
-import { createStoreConnect, STORE_CARD, STORE_SETTING } from "./db";
 import BooleanTrigger from "./boolean-trigger";
 import { CardEdit } from "./card-edit";
 import { playAudio } from "./utils";
+import { api } from "./api";
 
-const cardStore = createStoreConnect(STORE_CARD);
-
-const settingStore = createStoreConnect(STORE_SETTING);
 
 export function Cards() {
   const [state, setState] = useState({
@@ -33,27 +30,25 @@ export function Cards() {
     setState({ ...state, ...newState });
   };
   const refresh = () => {
-    let findfn = null;
+    let pattern = { };
     if (state.keyword) {
-      findfn = function findfn(record) {
-        if (
-          ~record.front.indexOf(state.keyword) ||
-          ~record.back.indexOf(state.keyword)
-        ) {
-          return true;
-        }
-        return false;
-      };
+      pattern = { ...pattern, $or: [{ front: { $regex: state.keyword } }, { back: { $regex: state.keyword } }] }
     }
-    return cardStore.query(findfn).then(list => _setState({ ...state, list }));
+    // return cardStore.query(findfn).then(list => _setState({ ...state, list }));
+    return api('card/list', 'post', {
+      ql: pattern
+    }).then(list => _setState({ ...state, list }))
   };
 
-  useEffect(function() {
+  useEffect(function () {
     Promise.all([
       refresh(),
-      settingStore.queryById("default_cards_view").then(({ value }) => {
-        _setState({ ...state, showBack: value === "back" });
+      api('setting/list', 'post', { ql: { id: 'default_cards_view' } }).then(list => {
+        _setState({ ...state, showBack: list[0].value === "back" });
       })
+      // settingStore.queryById("default_cards_view").then(({ value }) => {
+      //   _setState({ ...state, showBack: value === "back" });
+      // })
     ]).then(() => {
       _setState({ loading: false });
     });
@@ -69,18 +64,17 @@ export function Cards() {
             New Card
           </Button>
           <CardEdit
-            onSubmit={values =>
-              cardStore
-                .add({
-                  front: values.front,
-                  back: values.back,
-                  picture: values.picture,
-                  tags: values.tags,
-                  readLevel: 1,
-                  spellLevel: 1,
-                  recallLevel: 1
-                })
-                .then(refresh)
+            onSubmit={values => {
+              return api('card/add', 'post', {
+                front: values.front,
+                back: values.back,
+                picture: values.picture,
+                tags: values.tags,
+                readLevel: 1,
+                spellLevel: 1,
+                recallLevel: 1
+              }).then(refresh)
+            }
             }
           />
         </BooleanTrigger>
@@ -91,14 +85,12 @@ export function Cards() {
           style={{ float: "right" }}
           onChange={e => {
             const value = e.target.value === "true";
-            settingStore
-              .modify({
-                id: "default_cards_view",
-                value: value ? "back" : "front"
-              })
-              .then(() => {
-                _setState({ showBack: value, backIds: [] });
-              });
+            return api('setting/modify', 'post', {
+              id: "default_cards_view",
+              value: value ? "back" : "front"
+            }).then(() => {
+              _setState({ showBack: value, backIds: [] });
+            });
           }}
         >
           <Radio large value={false}>
@@ -119,7 +111,7 @@ export function Cards() {
             onKeyDown={e => {
               if (e.keyCode === 13) {
                 const value = e.target.value.trim();
-                _setState({ keyword: value } );
+                _setState({ keyword: value });
                 refresh()
               }
             }}
@@ -160,7 +152,7 @@ export function Cards() {
 function FlowLayout({ children }) {
   const column = 3;
   const lists = [];
-  React.Children.map(children, function(node, i) {
+  React.Children.map(children, function (node, i) {
     let arr = lists[i % column];
     if (!arr) {
       arr = lists[i % column] = [];
@@ -267,9 +259,9 @@ function Card({
         </div>
         <div>
           <ButtonGroup minimal>
-          <Button
+            <Button
               icon="volume-up"
-              onClick={() => playAudio({text: text})}
+              onClick={() => playAudio({ text: text })}
               intent={Intent.WARNING}
             ></Button>
 
@@ -278,28 +270,26 @@ function Card({
               <CardEdit
                 isEdit
                 value={{ front, back, picture, tags }}
-                onSubmit={values =>
-                  cardStore
-                    .modify(
-                      {
-                        id,
-                        front: values.front,
-                        back: values.back,
-                        picture: values.picture,
-                        tags: values.tags
-                      },
-                      {
-                        incrementModif: true
-                      }
-                    )
-                    .then(onReload)
+                onSubmit={values => {
+                  return api('card/modify', 'post', {
+                    id,
+                    front: values.front,
+                    back: values.back,
+                    picture: values.picture,
+                    tags: values.tags
+                  }).then(onReload)
+                }
                 }
               />
             </BooleanTrigger>
 
             <Button
               icon="delete"
-              onClick={() => cardStore.delete(id).then(onReload)}
+              onClick={() => {
+                return api('card/delete', 'get', {
+                  id
+                }).then(onReload)
+              }}
               intent={Intent.WARNING}
             ></Button>
           </ButtonGroup>

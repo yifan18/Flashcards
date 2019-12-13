@@ -6,6 +6,8 @@ const noopServiceWorkerMiddleware = require('react-dev-utils/noopServiceWorkerMi
 const ignoredFiles = require('react-dev-utils/ignoredFiles');
 const paths = require('./paths');
 const fs = require('fs');
+const route = require('../server/route');
+const express = require('express')
 
 const protocol = process.env.HTTPS === 'true' ? 'https' : 'http';
 const host = process.env.HOST || '0.0.0.0';
@@ -93,10 +95,9 @@ module.exports = function (proxy, allowedHost) {
       // This lets us open files from the runtime error overlay.
       app.use(errorOverlayMiddleware());
 
-      // app.use(function (req, res, next) {
-      //   const path = req.path
-      //   next()
-      // });
+      app.use(express.json()) // for parsing application/json
+      app.use(express.urlencoded({ extended: true })) // for parsing application/x-www-form-urlencoded
+      route(app)
 
       // This service worker file is effectively a 'no-op' that will reset any
       // previous service worker registered for the same host:port combination.

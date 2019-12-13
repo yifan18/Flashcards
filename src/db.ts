@@ -149,15 +149,6 @@ export function createStoreConnect<
       const db = await getDB();
       const { incrementModif } = (option || {}) as StoreModifyOption;
 
-      // if (records.length === 1) {
-      //   const record = await db.get(storeName, records[0].id);
-      //   return db.put(storeName, {
-      //     ...record,
-      //     ...records[0],
-      //     updated: new Date().getTime()
-      //   });
-      // }
-
       if (incrementModif) {
         for (let i = 0; i < records.length; i++) {
           const record = records[i];

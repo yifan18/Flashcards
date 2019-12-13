@@ -61,6 +61,7 @@
     "koa": "^2.11.0",
     "koa-static": "^5.0.0",
     "mini-css-extract-plugin": "0.5.0",
+    "mongodb": "^3.4.0",
     "node-fetch": "^2.6.0",
     "optimize-css-assets-webpack-plugin": "5.0.3",
     "pm2": "^4.2.1",
@@ -91,10 +92,10 @@
     "workbox-webpack-plugin": "4.3.1"
   },
   "scripts": {
-    "start": "PORT=80 node scripts/start.js",
+    "start": "PORT=3340 node scripts/start.js",
     "build": "node scripts/build.js",
     "test": "node scripts/test.js",
-    "deploy": "npm run build && node server/frontend.js",
+    "deploy": "npm run build && node server/frontend.js -- --port 82",
     "service": "pm2 start server/service.js -- --port 1280",
     "frontend": "pm2 start server/frontend.js -- --port 80"
   },
