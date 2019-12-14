@@ -1,5 +1,5 @@
 export function api(path: string, method?: "get" | "post", body?: any) {
-  path = "api/" + path;
+  path = "/api/" + path;
   return new Promise((resolve, reject) => {
     if (method === "get") {
       resolve(

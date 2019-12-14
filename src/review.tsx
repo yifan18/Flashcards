@@ -23,9 +23,11 @@ import {
   KVStore
 } from "./db";
 import * as dic from "./dictionary";
+import { playAudio } from "./utils";
+import { api } from "./api";
 
-const cardStore = createStoreConnect(STORE_CARD);
-const settingStore = createStoreConnect(STORE_SETTING);
+// const cardStore = createStoreConnect(STORE_CARD);
+// const settingStore = createStoreConnect(STORE_SETTING);
 
 function Body({ children }) {
   return <div style={{ width: 800, margin: "28px auto 0" }}>{children}</div>;
@@ -50,15 +52,28 @@ export function Review({ type }: { type: "read" | "spell" | "recall" }) {
 
   const refresh = () => {
     Promise.all([
-      cardStore.query(function(record: CardStore) {
-        if (!record[levelName]) return true;
-        // 转成ms
-        const intervalTime = dic.REMIND_LEVELS[record[levelName]] * 60e3;
-        const lastTest = record[lastTestName] || 0;
-        if (Date.now() - lastTest > intervalTime) return true;
-        return false;
+      api("card/list", "post", { ql: {} }).then(list => {
+        return list.filter(record => {
+          if (!record[levelName]) return true;
+          // 转成ms
+          const intervalTime = dic.REMIND_LEVELS[record[levelName]] * 60e3;
+          const lastTest = record[lastTestName] || 0;
+          if (Date.now() - lastTest > intervalTime) return true;
+          return false;
+        });
       }),
-      settingStore.queryById(type + "_default_view")
+      // cardStore.query(function(record: CardStore) {
+      //   if (!record[levelName]) return true;
+      //   // 转成ms
+      //   const intervalTime = dic.REMIND_LEVELS[record[levelName]] * 60e3;
+      //   const lastTest = record[lastTestName] || 0;
+      //   if (Date.now() - lastTest > intervalTime) return true;
+      //   return false;
+      // }),
+      api('setting/list', 'post', {ql: {id: type + "_default_view"}}).then(list => {
+        return list[0]
+      })
+      // settingStore.queryById(type + "_default_view")
     ]).then(values => {
       const list = values[0] as CardStore[];
       // reset
@@ -110,23 +125,35 @@ export function Review({ type }: { type: "read" | "spell" | "recall" }) {
         nextLevel = maxLevel;
     }
 
-    cardStore
-      .modify(
-        {
-          id: currentCard.id,
-          [levelName]: nextLevel,
-          [lastTestName]: Date.now()
-        },
-        { incrementModif: true }
-      )
-      .then(() => {
-        // @ts-ignore
-        setState({
-          ...state,
-          showAnswer: true,
-          currentCompleted: true
-        });
+    api('card/modify', 'post', {
+      id: currentCard.id,
+      [levelName]: nextLevel,
+      [lastTestName]: Date.now()
+    }).then(() => {
+      // @ts-ignore
+      setState({
+        ...state,
+        showAnswer: true,
+        currentCompleted: true
       });
+    });
+    // cardStore
+    //   .modify(
+    //     {
+    //       id: currentCard.id,
+    //       [levelName]: nextLevel,
+    //       [lastTestName]: Date.now()
+    //     },
+    //     { incrementModif: true }
+    //   )
+    //   .then(() => {
+    //     // @ts-ignore
+    //     setState({
+    //       ...state,
+    //       showAnswer: true,
+    //       currentCompleted: true
+    //     });
+    //   });
   };
 
   if (state.loading)
@@ -205,6 +232,14 @@ export function Review({ type }: { type: "read" | "spell" | "recall" }) {
             )
           ]}
         </div>
+        <Button
+          icon="volume-up"
+          onClick={() => {
+            const word = currentCard["front"];
+            if (!word) return;
+            playAudio({ text: word });
+          }}
+        />
         {!state.showAnswer && (
           <Button fill large onClick={showAnswer}>
             Show Answer
